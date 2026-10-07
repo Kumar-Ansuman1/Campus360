@@ -1,0 +1,45 @@
+CAMPUS360 OPERATIONAL KNOWLEDGE
+DOMAIN: ENERGY AND HVAC
+
+TOPIC: High Energy Consumption
+
+When abnormal or unusually high energy consumption is detected in a
+building, administrators should investigate major energy-consuming
+systems before changing operational settings.
+
+Potential causes include:
+- HVAC operating outside expected schedules
+- Excessive cooling or heating demand
+- Poor HVAC efficiency
+- Simultaneous heating and cooling
+- Lighting operating outside occupied hours
+- High-load electrical equipment
+- Equipment left running during low-occupancy periods
+
+Recommended investigation sequence:
+
+1. Verify the sensor reading and timestamp.
+2. Compare current consumption with recent baseline consumption.
+3. Check building occupancy.
+4. Check HVAC operating schedules.
+5. Inspect HVAC equipment for abnormal operation.
+6. Check lighting schedules.
+7. Identify unusually high-load equipment.
+8. Compare current consumption with historical patterns.
+
+If high consumption continues after verification, the facility operations
+team should inspect the affected equipment and operating schedules.
+
+HVAC optimization can reduce energy consumption when inefficient
+operation, excessive cooling demand, scheduling problems, or unnecessary
+operation are identified.
+
+Evidence should be combined with:
+- current energy consumption
+- historical energy consumption
+- occupancy
+- anomaly score
+- forecast
+- equipment status
+
+A recommendation should not be based only on a single sensor reading.

@@ -1,0 +1,32 @@
+CAMPUS360 OPERATIONAL KNOWLEDGE
+DOMAIN: WATER MANAGEMENT
+
+TOPIC: Elevated Water Consumption
+
+When water consumption increases unexpectedly, facility operators should
+first verify the sensor reading and investigate the affected building.
+
+Potential causes include:
+- Leakage
+- Increased occupancy
+- Excessive restroom usage
+- Irrigation demand
+- Cleaning operations
+- Faulty fixtures
+- Abnormal equipment consumption
+
+Recommended investigation sequence:
+
+1. Verify the sensor reading.
+2. Compare consumption with the recent baseline.
+3. Check occupancy and facility activity.
+4. Inspect high-consumption areas.
+5. Check for leakage.
+6. Inspect water fixtures and equipment.
+7. Review irrigation and cleaning schedules.
+
+If elevated consumption persists, investigate the affected zone and
+consider maintenance action.
+
+Water recommendations should consider current consumption, historical
+baseline, occupancy, anomaly status, and operational context.
