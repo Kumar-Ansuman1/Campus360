@@ -95,7 +95,9 @@ function App() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
         <div className="max-w-md rounded-2xl border border-red-100 bg-white p-6 text-center shadow-sm">
-          <div className="text-3xl">⚠️</div>
+          <div className="text-3xl">
+            ⚠️
+          </div>
 
           <h1 className="mt-3 text-lg font-semibold text-slate-900">
             Unable to load dashboard
@@ -117,6 +119,50 @@ function App() {
     return null
   }
 
+  /*
+   * ------------------------------------------------------------------------
+   * Optimization Decision Source of Truth
+   * ------------------------------------------------------------------------
+   *
+   * The existing dashboard status is generated from the original
+   * telemetry pipeline. The optimization layer adds context-aware
+   * decision information on top of that.
+   *
+   * When an optimization decision exists, use its top priority to
+   * synchronize the facility-facing AI panels.
+   *
+   * This prevents the dashboard from showing:
+   *
+   *   Header      -> NORMAL
+   *   AI Insight  -> NORMAL / LOW
+   *   Decision    -> CRITICAL / P1
+   *
+   * at the same time.
+   */
+
+  const topPriority =
+    dashboardData.optimization?.top_priority
+
+  const effectiveCurrentStatus = topPriority
+    ? {
+        ...dashboardData.current_status,
+        overall_status:
+          topPriority.status as typeof dashboardData.current_status.overall_status,
+        energy_status:
+          topPriority.category === "ENERGY"
+            ? topPriority.status
+            : dashboardData.current_status.energy_status,
+      }
+    : dashboardData.current_status
+
+  const effectivePriority =
+    topPriority?.priority ??
+    dashboardData.priority
+
+  const effectiveExplanation =
+    dashboardData.context_analysis?.interpretation ??
+    dashboardData.explanation
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <div className="mx-auto max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8">
@@ -133,8 +179,7 @@ function App() {
           }
           location={`${dashboardData.facility.city}, ${dashboardData.facility.state}`}
           status={
-            dashboardData.current_status
-              .overall_status
+            effectiveCurrentStatus.overall_status
           }
           aiOnline={true}
           lastUpdated={
@@ -143,8 +188,14 @@ function App() {
         />
 
         <main className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-12">
+          {/* ---------------------------------------------------------------- */}
+          {/* KPI + Forecast                                                    */}
+          {/* ---------------------------------------------------------------- */}
+
           <div className="lg:col-span-5">
-            <KPIGrid kpis={dashboardData.kpis} />
+            <KPIGrid
+              kpis={dashboardData.kpis}
+            />
           </div>
 
           <div className="lg:col-span-7">
@@ -152,6 +203,10 @@ function App() {
               forecast={dashboardData.forecast}
             />
           </div>
+
+          {/* ---------------------------------------------------------------- */}
+          {/* AI Decision Center                                                */}
+          {/* ---------------------------------------------------------------- */}
 
           <div className="lg:col-span-12">
             <AIDecisionCenter
@@ -166,11 +221,20 @@ function App() {
             />
           </div>
 
+          {/* ---------------------------------------------------------------- */}
+          {/* Existing AI intelligence panels                                  */}
+          {/* ---------------------------------------------------------------- */}
+
           <div className="lg:col-span-4">
             <AlertCenter
-              anomalies={dashboardData.anomalies}
+              anomalies={
+                dashboardData.anomalies
+              }
               currentStatus={
-                dashboardData.current_status
+                effectiveCurrentStatus
+              }
+              optimization={
+                dashboardData.optimization
               }
             />
           </div>
@@ -178,16 +242,16 @@ function App() {
           <div className="lg:col-span-3">
             <AIInsightPanel
               currentStatus={
-                dashboardData.current_status
+                effectiveCurrentStatus
               }
               confidence={
                 dashboardData.confidence
               }
               priority={
-                dashboardData.priority
+                effectivePriority
               }
               explanation={
-                dashboardData.explanation
+                effectiveExplanation
               }
               forecast={
                 dashboardData.forecast
@@ -206,17 +270,20 @@ function App() {
           <div className="lg:col-span-7">
             <AIRecommendations
               recommendation={
+                topPriority?.recommended_action ??
                 dashboardData.recommendation
               }
               priority={
-                dashboardData.priority
+                effectivePriority
               }
             />
           </div>
 
           <div className="lg:col-span-5">
             <WhatIfAnalysis
-              whatIf={dashboardData.what_if}
+              whatIf={
+                dashboardData.what_if
+              }
               analysis={
                 dashboardData.what_if_analysis
               }

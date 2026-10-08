@@ -3,36 +3,49 @@ type AIRecommendationsProps = {
   priority: string
 }
 
-function getPriorityStyle(priority: string) {
-  switch (priority.toUpperCase()) {
-    case "CRITICAL":
-      return {
-        badge:
-          "border-red-100 bg-red-50 text-red-700",
-        dot: "bg-red-500",
-      }
+function getPriorityStyle(
+  priority: string,
+) {
+  const normalized =
+    priority.toUpperCase()
 
-    case "HIGH":
-      return {
-        badge:
-          "border-orange-100 bg-orange-50 text-orange-700",
-        dot: "bg-orange-500",
-      }
+  if (
+    normalized.startsWith("P1") ||
+    normalized === "CRITICAL"
+  ) {
+    return {
+      badge:
+        "border-red-100 bg-red-50 text-red-700",
+      dot: "bg-red-500",
+    }
+  }
 
-    case "MEDIUM":
-      return {
-        badge:
-          "border-yellow-100 bg-yellow-50 text-yellow-700",
-        dot: "bg-yellow-500",
-      }
+  if (
+    normalized.startsWith("P2") ||
+    normalized === "HIGH"
+  ) {
+    return {
+      badge:
+        "border-orange-100 bg-orange-50 text-orange-700",
+      dot: "bg-orange-500",
+    }
+  }
 
-    case "LOW":
-    default:
-      return {
-        badge:
-          "border-emerald-100 bg-emerald-50 text-emerald-700",
-        dot: "bg-emerald-500",
-      }
+  if (
+    normalized.startsWith("P3") ||
+    normalized === "MEDIUM"
+  ) {
+    return {
+      badge:
+        "border-yellow-100 bg-yellow-50 text-yellow-700",
+      dot: "bg-yellow-500",
+    }
+  }
+
+  return {
+    badge:
+      "border-emerald-100 bg-emerald-50 text-emerald-700",
+    dot: "bg-emerald-500",
   }
 }
 
@@ -67,7 +80,6 @@ function AIRecommendations({
       {/* Recommendation */}
       <div className="mt-5 rounded-xl border border-blue-100 bg-blue-50/60 p-5">
         <div className="flex items-start gap-3">
-          {/* Icon */}
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-blue-100 bg-white text-lg shadow-sm">
             💡
           </div>
