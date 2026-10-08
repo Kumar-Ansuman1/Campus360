@@ -18,33 +18,58 @@ function App() {
     useState<DashboardData | null>(null)
 
   const [loading, setLoading] = useState(true)
+  const [isOptimizing, setIsOptimizing] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    async function loadDashboard() {
-      try {
+  async function loadDashboard(
+    showLoading = true,
+  ) {
+    try {
+      if (showLoading) {
         setLoading(true)
-        setError(null)
+      }
 
-        const data = await getDashboardData()
+      setError(null)
 
-        console.log(
-          "Campus360 dashboard data:",
-          data,
-        )
+      const data = await getDashboardData()
 
-        setDashboardData(data)
-      } catch (err) {
-        setError(
-          err instanceof Error
-            ? err.message
-            : "Failed to load dashboard data",
-        )
-      } finally {
+      console.log(
+        "Campus360 dashboard data:",
+        data,
+      )
+
+      setDashboardData(data)
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to load dashboard data",
+      )
+    } finally {
+      if (showLoading) {
         setLoading(false)
       }
     }
+  }
 
+  async function handleOptimize() {
+    try {
+      setIsOptimizing(true)
+      setError(null)
+
+      await loadDashboard(false)
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to optimize campus",
+      )
+    } finally {
+      setIsOptimizing(false)
+    }
+  }
+
+  useEffect(() => {
     loadDashboard()
   }, [])
 
@@ -70,9 +95,7 @@ function App() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
         <div className="max-w-md rounded-2xl border border-red-100 bg-white p-6 text-center shadow-sm">
-          <div className="text-3xl">
-            ⚠️
-          </div>
+          <div className="text-3xl">⚠️</div>
 
           <h1 className="mt-3 text-lg font-semibold text-slate-900">
             Unable to load dashboard
@@ -120,14 +143,8 @@ function App() {
         />
 
         <main className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-12">
-          {/* ---------------------------------------------------------------- */}
-          {/* KPI + Forecast                                                    */}
-          {/* ---------------------------------------------------------------- */}
-
           <div className="lg:col-span-5">
-            <KPIGrid
-              kpis={dashboardData.kpis}
-            />
+            <KPIGrid kpis={dashboardData.kpis} />
           </div>
 
           <div className="lg:col-span-7">
@@ -135,10 +152,6 @@ function App() {
               forecast={dashboardData.forecast}
             />
           </div>
-
-          {/* ---------------------------------------------------------------- */}
-          {/* AI Decision Center                                                */}
-          {/* ---------------------------------------------------------------- */}
 
           <div className="lg:col-span-12">
             <AIDecisionCenter
@@ -148,18 +161,14 @@ function App() {
               optimization={
                 dashboardData.optimization
               }
+              onOptimize={handleOptimize}
+              isOptimizing={isOptimizing}
             />
           </div>
 
-          {/* ---------------------------------------------------------------- */}
-          {/* Existing AI intelligence panels                                  */}
-          {/* ---------------------------------------------------------------- */}
-
           <div className="lg:col-span-4">
             <AlertCenter
-              anomalies={
-                dashboardData.anomalies
-              }
+              anomalies={dashboardData.anomalies}
               currentStatus={
                 dashboardData.current_status
               }
@@ -207,9 +216,7 @@ function App() {
 
           <div className="lg:col-span-5">
             <WhatIfAnalysis
-              whatIf={
-                dashboardData.what_if
-              }
+              whatIf={dashboardData.what_if}
               analysis={
                 dashboardData.what_if_analysis
               }

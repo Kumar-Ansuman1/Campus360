@@ -9,6 +9,8 @@ import type {
 type AIDecisionCenterProps = {
   contextAnalysis?: ContextAnalysis
   optimization?: OptimizationData
+  onOptimize?: () => void
+  isOptimizing?: boolean
 }
 
 function getPriorityStyles(priority: string) {
@@ -199,11 +201,11 @@ function PriorityRow({
 
 function DecisionDetails({
   priority,
+  showRecommendation,
 }: {
   priority: OptimizationPriority
+  showRecommendation: boolean
 }) {
-  const [showImpact, setShowImpact] = useState(false)
-
   const styles = getPriorityStyles(
     priority.priority,
   )
@@ -213,36 +215,19 @@ function DecisionDetails({
       className={`mt-4 rounded-2xl border p-4 ${styles.accent} ${styles.background}`}
     >
       <div className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
-              Top Priority
-            </p>
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
+            Top Priority
+          </p>
 
-            <div className="mt-1 flex items-center gap-2">
-              <h3 className="text-xl font-bold text-slate-900">
-                {priority.category}
-              </h3>
+          <div className="mt-1 flex items-center gap-2">
+            <h3 className="text-xl font-bold text-slate-900">
+              {priority.category}
+            </h3>
 
-              <PriorityBadge
-                priority={priority.priority}
-              />
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-white bg-white/80 px-3 py-2 text-right">
-            <p className="text-[10px] text-slate-400">
-              Decision Score
-            </p>
-
-            <p className="text-lg font-bold text-slate-900">
-              {formatNumber(
-                priority.priority_score,
-              )}
-              <span className="text-xs font-medium text-slate-400">
-                /100
-              </span>
-            </p>
+            <PriorityBadge
+              priority={priority.priority}
+            />
           </div>
         </div>
 
@@ -270,31 +255,27 @@ function DecisionDetails({
             <p className="mt-1 text-xs text-slate-500">
               Forecast trend:{" "}
               <span className="font-semibold text-slate-700">
-                {priority.forecast_trend}
+                {priority.forecast}
               </span>
             </p>
           </div>
 
-          <div className="rounded-xl border border-white bg-white/80 p-3">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
-              Recommended action
-            </p>
+          {showRecommendation && (
+            <div className="rounded-xl border border-blue-200 bg-white p-3">
+              <p className="text-[10px] font-bold uppercase tracking-wide text-blue-600">
+                Recommended action
+              </p>
 
-            <p className="mt-2 text-sm font-semibold leading-6 text-slate-800">
-              {priority.recommended_action}
-            </p>
-          </div>
+              <p className="mt-2 text-sm font-semibold leading-6 text-slate-800">
+                {priority.recommended_action}
+              </p>
+            </div>
+          )}
         </div>
 
-        <div>
-          <button
-            type="button"
-            onClick={() =>
-              setShowImpact((current) => !current)
-            }
-            className="flex w-full items-center justify-between rounded-xl border border-blue-200 bg-white px-4 py-3 text-left transition hover:border-blue-300 hover:bg-blue-50/50"
-          >
-            <div>
+        {showRecommendation && (
+          <div className="rounded-xl border border-blue-200 bg-white p-3">
+            <div className="mb-3">
               <p className="text-xs font-bold text-blue-700">
                 Expected impact
               </p>
@@ -304,13 +285,7 @@ function DecisionDetails({
               </p>
             </div>
 
-            <span className="text-sm font-semibold text-blue-600">
-              {showImpact ? "Hide" : "View impact"}
-            </span>
-          </button>
-
-          {showImpact && (
-            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <ImpactCard
                 label="Energy saved"
                 value={formatNumber(
@@ -338,8 +313,8 @@ function DecisionDetails({
                 unit="kg / day"
               />
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -350,6 +325,10 @@ function ContextPanel({
 }: {
   context: ContextAnalysis
 }) {
+  const enabledFlags = Object.entries(
+    context.flags,
+  ).filter(([, enabled]) => enabled)
+
   return (
     <div className="rounded-2xl border border-blue-100 bg-white p-4">
       <div className="flex items-start justify-between gap-3">
@@ -437,47 +416,71 @@ function ContextPanel({
         </p>
       </div>
 
-      {context.flags.length > 0 && (
+      {enabledFlags.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-1.5">
-          {context.flags.map(
-            (flag, index) => (
-              <span
-                key={`${flag}-${index}`}
-                className="rounded-full border border-orange-100 bg-orange-50 px-2 py-1 text-[10px] font-medium text-orange-700"
-              >
-                {flag}
-              </span>
-            ),
-          )}
+          {enabledFlags.map(([flag]) => (
+            <span
+              key={flag}
+              className="rounded-full border border-orange-100 bg-orange-50 px-2 py-1 text-[10px] font-medium capitalize text-orange-700"
+            >
+              {flag.replaceAll("_", " ")}
+            </span>
+          ))}
         </div>
       )}
     </div>
   )
 }
 
-function EmptyDecisionState() {
+function EmptyDecisionState({
+  onOptimize,
+  isOptimizing,
+}: {
+  onOptimize?: () => void
+  isOptimizing?: boolean
+}) {
   return (
     <section className="rounded-2xl border border-blue-100 bg-white p-5 shadow-sm">
-      <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-lg">
-          🤖
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-lg">
+            🤖
+          </div>
+
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">
+              AI Decision Center
+            </h2>
+
+            <p className="text-sm text-slate-500">
+              Ready to analyze campus priorities
+            </p>
+          </div>
         </div>
 
-        <div>
-          <h2 className="text-lg font-semibold text-slate-900">
-            AI Decision Center
-          </h2>
-
-          <p className="text-sm text-slate-500">
-            Waiting for optimization analysis
-          </p>
-        </div>
+        <button
+          type="button"
+          onClick={onOptimize}
+          disabled={isOptimizing}
+          className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isOptimizing ? (
+            <>
+              <span className="h-3 w-3 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+              Optimizing...
+            </>
+          ) : (
+            <>
+              <span>⚡</span>
+              Optimize Campus
+            </>
+          )}
+        </button>
       </div>
 
       <div className="mt-5 rounded-xl border border-slate-100 bg-slate-50 p-4">
         <p className="text-sm text-slate-500">
-          Optimization data is not available yet.
-          Make sure the updated backend pipeline is running.
+          Click Optimize Campus to analyze the current campus state and identify the recommended action.
         </p>
       </div>
     </section>
@@ -487,20 +490,34 @@ function EmptyDecisionState() {
 function AIDecisionCenter({
   contextAnalysis,
   optimization,
+  onOptimize,
+  isOptimizing = false,
 }: AIDecisionCenterProps) {
+  const [showRecommendation, setShowRecommendation] =
+    useState(false)
+
   if (
     !optimization ||
     !optimization.top_priority
   ) {
-    return <EmptyDecisionState />
+    return (
+      <EmptyDecisionState
+        onOptimize={onOptimize}
+        isOptimizing={isOptimizing}
+      />
+    )
   }
 
   const topPriority =
     optimization.top_priority
 
+  function handleOptimize() {
+    setShowRecommendation(true)
+    onOptimize?.()
+  }
+
   return (
     <section className="rounded-2xl border border-blue-100 bg-white p-5 shadow-sm">
-      {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <div className="flex items-center gap-2">
@@ -520,23 +537,43 @@ function AIDecisionCenter({
           </div>
         </div>
 
-        <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2">
-          <p className="text-[10px] font-bold uppercase tracking-wide text-emerald-600">
-            Decision
-          </p>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleOptimize}
+            disabled={isOptimizing}
+            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isOptimizing ? (
+              <>
+                <span className="h-3 w-3 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                Optimizing...
+              </>
+            ) : (
+              <>
+                <span>⚡</span>
+                Optimize Campus
+              </>
+            )}
+          </button>
 
-          <p className="mt-0.5 text-xs font-bold text-emerald-700">
-            {optimization.decision}
-          </p>
+          <div className="rounded-xl border border-orange-100 bg-orange-50 px-3 py-2">
+            <p className="text-[10px] font-bold uppercase tracking-wide text-orange-600">
+              Attention
+            </p>
+
+            <p className="mt-0.5 text-xs font-bold text-orange-700">
+              {topPriority.priority}
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* Main decision */}
       <DecisionDetails
         priority={topPriority}
+        showRecommendation={showRecommendation}
       />
 
-      {/* Context + ranking */}
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
         {contextAnalysis ? (
           <ContextPanel

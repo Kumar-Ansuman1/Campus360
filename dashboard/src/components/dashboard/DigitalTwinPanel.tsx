@@ -24,16 +24,6 @@ type Facility = {
   size: [number, number, number]
 }
 
-/*
- * The first facility is connected to the real backend Digital Twin.
- *
- * Backend:
- * building_id =
- * d040b2f2-9ea8-4336-a9f9-9c72b07e2597
- *
- * The other facilities are currently visual placeholders because
- * the backend currently returns Digital Twin state for one building.
- */
 const facilities: Facility[] = [
   {
     id: "d040b2f2-9ea8-4336-a9f9-9c72b07e2597",
@@ -111,6 +101,48 @@ function getStatusTextClass(status: BuildingStatus) {
     case "CRITICAL":
       return "text-red-600"
   }
+}
+
+function getPriorityStyles(priority: string) {
+  const value = priority.toUpperCase()
+
+  if (value.startsWith("P1")) {
+    return {
+      badge: "bg-red-50 text-red-700 border-red-100",
+      dot: "bg-red-500",
+    }
+  }
+
+  if (value.startsWith("P2")) {
+    return {
+      badge: "bg-orange-50 text-orange-700 border-orange-100",
+      dot: "bg-orange-500",
+    }
+  }
+
+  if (value.startsWith("P3")) {
+    return {
+      badge: "bg-yellow-50 text-yellow-700 border-yellow-100",
+      dot: "bg-yellow-500",
+    }
+  }
+
+  return {
+    badge: "bg-slate-50 text-slate-600 border-slate-200",
+    dot: "bg-slate-400",
+  }
+}
+
+function formatNumber(value: number) {
+  return new Intl.NumberFormat("en-IN", {
+    maximumFractionDigits: 1,
+  }).format(value)
+}
+
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat("en-IN", {
+    maximumFractionDigits: 0,
+  }).format(value)
 }
 
 /* -------------------------------------------------------------------------- */
@@ -320,18 +352,6 @@ function FacilityBuilding({
 }) {
   const [width, height, depth] = facility.size
 
-  /*
-   * IMPORTANT:
-   *
-   * Both values are UUID strings now.
-   *
-   * This is the fix for the previous problem where:
-   *
-   * frontend -> 1
-   * backend  -> d040b2f2-...
-   *
-   * could never match.
-   */
   const isLiveBuilding =
     facility.id === digitalTwin.building_id
 
@@ -354,7 +374,6 @@ function FacilityBuilding({
         onSelect()
       }}
     >
-      {/* Building base */}
       <mesh
         position={[0, 0.12, 0]}
         receiveShadow
@@ -373,7 +392,6 @@ function FacilityBuilding({
         />
       </mesh>
 
-      {/* Main building */}
       <mesh
         position={[0, height / 2, 0]}
         castShadow
@@ -394,7 +412,6 @@ function FacilityBuilding({
         />
       </mesh>
 
-      {/* Backend-driven status roof */}
       <mesh
         position={[0, height + 0.12, 0]}
         castShadow
@@ -417,14 +434,12 @@ function FacilityBuilding({
         />
       </mesh>
 
-      {/* Windows */}
       <BuildingWindows
         width={width}
         height={height}
         depth={depth}
       />
 
-      {/* Entrance */}
       <mesh
         position={[
           0,
@@ -443,7 +458,6 @@ function FacilityBuilding({
         />
       </mesh>
 
-      {/* Building label */}
       <Html
         position={[0, height + 0.7, 0]}
         center
@@ -472,7 +486,6 @@ function FacilityBuilding({
         </div>
       </Html>
 
-      {/* Selected indicator */}
       {selected && (
         <mesh
           position={[
@@ -1157,15 +1170,6 @@ type DigitalTwinPanelProps = {
 function DigitalTwinPanel({
   digitalTwin,
 }: DigitalTwinPanelProps) {
-  /*
-   * The backend building UUID is now the initial selected facility.
-   *
-   * This means the Digital Twin starts on:
-   *
-   * Administration Building
-   *
-   * instead of the old dummy Office Tower A.
-   */
   const [
     selectedBuildingId,
     setSelectedBuildingId,
@@ -1193,10 +1197,6 @@ function DigitalTwinPanel({
     selectedFacility.id ===
     digitalTwin.building_id
 
-  /*
-   * When the selected facility is the backend-connected building,
-   * use the live backend values.
-   */
   const selectedName = isLiveBuilding
     ? digitalTwin.building
     : selectedFacility.name
@@ -1220,6 +1220,14 @@ function DigitalTwinPanel({
   const selectedParking = isLiveBuilding
     ? digitalTwin.parking
     : selectedFacility.occupancy
+
+  const optimization =
+    isLiveBuilding
+      ? digitalTwin.optimization
+      : undefined
+
+  const topPriority =
+    optimization?.top_priority
 
   return (
     <section className="h-full rounded-2xl border border-blue-100 bg-white p-5 shadow-sm">
@@ -1287,7 +1295,6 @@ function DigitalTwinPanel({
           </Canvas>
         </div>
 
-        {/* Instructions */}
         <div className="absolute left-3 top-3 rounded-lg border border-white bg-white/90 px-3 py-2 shadow-sm backdrop-blur">
           <p className="text-[10px] font-semibold text-slate-700">
             CAMPUS DIGITAL TWIN
@@ -1298,7 +1305,6 @@ function DigitalTwinPanel({
           </p>
         </div>
 
-        {/* Live infrastructure indicators */}
         <div className="absolute bottom-3 left-3 rounded-lg border border-white bg-white/90 px-3 py-2 shadow-sm backdrop-blur">
           <div className="flex items-center gap-3">
             <span className="text-[9px] text-slate-500">
@@ -1315,7 +1321,6 @@ function DigitalTwinPanel({
           </div>
         </div>
 
-        {/* Status legend */}
         <div className="absolute bottom-3 right-3 rounded-lg border border-white bg-white/90 px-3 py-2 shadow-sm backdrop-blur">
           <div className="flex flex-wrap items-center gap-3">
             <LegendItem
@@ -1401,19 +1406,126 @@ function DigitalTwinPanel({
           />
         </div>
 
-        {/* Backend-only Digital Twin values */}
+        {/* Backend Digital Twin values */}
         {isLiveBuilding && (
-          <div className="mt-3 grid grid-cols-2 gap-3">
-            <Metric
-              label="Forecast"
-              value={digitalTwin.forecast}
-            />
+          <>
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <Metric
+                label="Forecast"
+                value={digitalTwin.forecast}
+              />
 
-            <Metric
-              label="Priority"
-              value={digitalTwin.priority}
-            />
-          </div>
+              <Metric
+                label="Priority"
+                value={digitalTwin.priority}
+              />
+            </div>
+
+            {/* AI Decision */}
+            {topPriority && (
+              <div className="mt-4 rounded-xl border border-red-100 bg-white p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-blue-500">
+                      AI Decision
+                    </p>
+
+                    <div className="mt-1 flex items-center gap-2">
+                      <span className="text-sm font-bold text-slate-900">
+                        {topPriority.category}
+                      </span>
+
+                      <span
+                        className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-[10px] font-bold ${
+                          getPriorityStyles(
+                            topPriority.priority,
+                          ).badge
+                        }`}
+                      >
+                        <span
+                          className={`h-1.5 w-1.5 rounded-full ${
+                            getPriorityStyles(
+                              topPriority.priority,
+                            ).dot
+                          }`}
+                        />
+
+                        {topPriority.priority}
+                      </span>
+                    </div>
+                  </div>
+
+                  <span className="rounded-full border border-red-100 bg-red-50 px-2.5 py-1 text-[10px] font-bold text-red-700">
+                    {topPriority.status}
+                  </span>
+                </div>
+
+                <div className="mt-3 rounded-lg bg-slate-50 p-3">
+                  <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                    Recommended action
+                  </p>
+
+                  <p className="mt-1 text-xs font-semibold leading-5 text-slate-800">
+                    {topPriority.recommended_action}
+                  </p>
+                </div>
+
+                <div className="mt-3 grid grid-cols-3 gap-2">
+                  <div className="rounded-lg border border-blue-100 bg-blue-50/50 p-2">
+                    <p className="text-[9px] text-slate-400">
+                      Energy saved
+                    </p>
+
+                    <p className="mt-1 text-xs font-bold text-slate-800">
+                      {formatNumber(
+                        topPriority.impact
+                          .energy_saved_kwh_per_day,
+                      )}
+                    </p>
+
+                    <p className="text-[9px] text-slate-400">
+                      kWh/day
+                    </p>
+                  </div>
+
+                  <div className="rounded-lg border border-blue-100 bg-blue-50/50 p-2">
+                    <p className="text-[9px] text-slate-400">
+                      Cost saving
+                    </p>
+
+                    <p className="mt-1 text-xs font-bold text-slate-800">
+                      ₹
+                      {formatCurrency(
+                        topPriority.impact
+                          .cost_saving_inr_per_day,
+                      )}
+                    </p>
+
+                    <p className="text-[9px] text-slate-400">
+                      per day
+                    </p>
+                  </div>
+
+                  <div className="rounded-lg border border-blue-100 bg-blue-50/50 p-2">
+                    <p className="text-[9px] text-slate-400">
+                      CO₂ reduction
+                    </p>
+
+                    <p className="mt-1 text-xs font-bold text-slate-800">
+                      {formatNumber(
+                        topPriority.impact
+                          .co2_reduction_kg_per_day,
+                      )}
+                    </p>
+
+                    <p className="text-[9px] text-slate-400">
+                      kg/day
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </section>
