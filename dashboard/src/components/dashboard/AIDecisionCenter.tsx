@@ -353,7 +353,7 @@ function ContextPanel({
 
       <div className="mt-4 grid grid-cols-2 gap-2">
         <ContextMetric
-          label="Actual energy"
+          label="Context energy"
           value={`${formatNumber(
             context.actual_energy,
           )} kWh`}
@@ -405,6 +405,10 @@ function ContextPanel({
           }
         />
       </div>
+
+      <p className="mt-2 text-[10px] leading-4 text-slate-400">
+        Context energy is evaluated with occupancy, temperature, and HVAC conditions for optimization.
+      </p>
 
       <div className="mt-3 rounded-xl bg-blue-50 p-3">
         <p className="text-[10px] font-bold uppercase tracking-wide text-blue-500">

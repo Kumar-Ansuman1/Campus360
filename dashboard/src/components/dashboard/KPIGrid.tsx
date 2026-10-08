@@ -20,7 +20,7 @@ function KPIGrid({ kpis }: KPIGridProps) {
 
       <div className="grid grid-cols-2 gap-3">
         <KPICard
-          title="Energy"
+          title="Latest Energy"
           value={kpis.energy_kwh}
           unit="kWh"
           icon="⚡"
