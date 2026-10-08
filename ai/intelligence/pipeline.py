@@ -1974,6 +1974,45 @@ class CampusIntelligencePipeline:
         optimization=None
     ):
 
+        # The optimization layer can identify a critical issue even
+        # when the legacy telemetry/anomaly status is still NORMAL.
+        # Reflect that decision in the Digital Twin so the visual
+        # layer agrees with the administrator-facing priority.
+        twin_status = current_status.get(
+            "overall_status",
+            "NORMAL"
+        )
+
+        twin_priority = priority
+
+        if isinstance(
+            optimization,
+            dict
+        ):
+
+            optimization_top = optimization.get(
+                "top_priority"
+            )
+
+            if isinstance(
+                optimization_top,
+                dict
+            ):
+
+                optimization_priority = str(
+                    optimization_top.get(
+                        "priority",
+                        ""
+                    )
+                ).upper()
+
+                if optimization_priority.startswith(
+                    ("P1", "P2")
+                ):
+
+                    twin_status = "ATTENTION"
+                    twin_priority = optimization_priority
+
         return {
 
             "facility":
@@ -1998,10 +2037,7 @@ class CampusIntelligencePipeline:
                 ),
 
             "status":
-                current_status.get(
-                    "overall_status",
-                    "NORMAL"
-                ),
+                twin_status,
 
             "energy":
                 current_energy,
@@ -2033,7 +2069,7 @@ class CampusIntelligencePipeline:
                 else "UNKNOWN",
 
             "priority":
-                priority,
+                twin_priority,
 
             "what_if":
                 what_if_analysis,
@@ -2055,9 +2091,30 @@ class CampusIntelligencePipeline:
                 {
 
                     "energy_state":
-                        current_status.get(
-                            "energy_status",
-                            "NORMAL"
+                        (
+                            optimization.get(
+                                "top_priority",
+                                {}
+                            ).get(
+                                "status",
+                                current_status.get(
+                                    "energy_status",
+                                    "NORMAL"
+                                )
+                            )
+                            if isinstance(
+                                optimization,
+                                dict
+                            ) and isinstance(
+                                optimization.get(
+                                    "top_priority"
+                                ),
+                                dict
+                            )
+                            else current_status.get(
+                                "energy_status",
+                                "NORMAL"
+                            )
                         ),
 
                     "water_state":
@@ -2139,7 +2196,7 @@ class CampusIntelligencePipeline:
             "category": "ENERGY",
             "status": energy_status,
             "deviation_percent": energy_deviation,
-            "forecast_trend": energy_trend
+            "forecast": energy_trend
         })
 
         category_map = {
@@ -2161,7 +2218,7 @@ class CampusIntelligencePipeline:
                 "category": category,
                 "status": status,
                 "deviation_percent": 0,
-                "forecast_trend": "STABLE"
+                "forecast": "STABLE"
             })
 
         return issues
@@ -2221,8 +2278,17 @@ class CampusIntelligencePipeline:
                 top_priority[
                     "recommended_action"
                 ] = (
-                    recommendation
-                    or "Optimize HVAC operating schedule"
+                    "Optimize HVAC operating schedule"
+                    if str(
+                        top_priority.get(
+                            "category",
+                            ""
+                        )
+                    ).upper() == "ENERGY"
+                    else (
+                        recommendation
+                        or "Review the identified campus issue."
+                    )
                 )
 
                 top_priority[
@@ -2818,15 +2884,29 @@ class CampusIntelligencePipeline:
 
             try:
 
-                demo_context = (
-                    self.context_analyzer.demo_context()
+                context_data = (
+                    self.loader.get_context(
+                        building_id
+                    )
+                    if self.loader is not None
+                    else {}
                 )
 
-                context_analysis = (
-                    self.context_analyzer.analyze(
-                        **demo_context
+                if not context_data:
+
+                    context_analysis = {
+                        "status": "UNKNOWN",
+                        "error":
+                            "No context telemetry was returned."
+                    }
+
+                else:
+
+                    context_analysis = (
+                        self.context_analyzer.analyze(
+                            **context_data
+                        )
                     )
-                )
 
             except Exception as exc:
 

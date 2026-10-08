@@ -452,29 +452,6 @@ class EnergyContextAnalyzer:
         }
 
     # ============================================================
-    # DEMO CONTEXT
-    # ============================================================
-
-    @classmethod
-    def demo_context(cls):
-        """
-        Return the synthetic energy context required for the
-        Campus360 optimization demonstration.
-
-        This does not modify or replace live telemetry.
-        """
-
-        return {
-            "actual_energy": 185.0,
-            "expected_energy": 50.0,
-            "occupancy": 22.0,
-            "working_day": True,
-            "temperature": 33.0,
-            "hvac_load": 90.0,
-            "hour": 14
-        }
-
-    # ============================================================
     # MAIN ANALYSIS
     # ============================================================
 
@@ -493,10 +470,10 @@ class EnergyContextAnalyzer:
         Perform complete energy context analysis.
 
         Parameters are configurable so the optimization layer
-        can later receive real or simulated context.
+        can receive real or simulated context.
 
-        If context values are omitted, the required demo
-        scenario is used.
+        If context values are omitted, the configured defaults
+        are used.
         """
 
         actual = cls._number(
@@ -656,15 +633,10 @@ if __name__ == "__main__":
         "=" * 65
     )
 
-    # Required demo scenario:
+    # Quick standalone test.
     #
-    # Actual energy     = 185 kWh
-    # Expected energy   = 50 kWh
-    # Occupancy         = 22%
-    # Working day       = YES
-    # Temperature       = 33 C
-    # HVAC load         = 90%
-    # Time              = 2 PM
+    # In the actual application these values now come from
+    # simulated context telemetry stored in the database.
 
     result = EnergyContextAnalyzer.analyze(
         actual_energy=185,

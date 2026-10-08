@@ -85,6 +85,32 @@ def get_telemetry_by_metric(
 
 
 @router.get(
+    "/context/building/{building_id}",
+    response_model=ApiResponse[list[TelemetryResponse]],
+)
+def get_context_telemetry_by_building(
+    building_id: UUID,
+    db: Session = Depends(get_db),
+):
+    """
+    Return context telemetry for a building.
+
+    This endpoint is consumed by the AI optimization layer.
+    """
+
+    telemetry = TelemetryService.get_context_by_building(
+        db,
+        building_id,
+    )
+
+    return ApiResponse(
+        status="SUCCESS",
+        message="Context telemetry retrieved successfully",
+        data=telemetry,
+    )
+
+
+@router.get(
     "/range/{start_time}/{end_time}",
     response_model=ApiResponse[list[TelemetryResponse]],
 )

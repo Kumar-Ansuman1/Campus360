@@ -8,6 +8,7 @@ import AIInsightPanel from "./components/dashboard/AIInsightPanel"
 import DigitalTwinPanel from "./components/dashboard/DigitalTwinPanel"
 import AIRecommendations from "./components/dashboard/AIRecommendations"
 import WhatIfAnalysis from "./components/dashboard/WhatIfAnalysis"
+import AIDecisionCenter from "./components/dashboard/AIDecisionCenter"
 
 import { getDashboardData } from "./api/dashboardApi"
 import type { DashboardData } from "./types/dashboard"
@@ -27,14 +28,17 @@ function App() {
 
         const data = await getDashboardData()
 
-        console.log("Campus360 dashboard data:", data)
+        console.log(
+          "Campus360 dashboard data:",
+          data,
+        )
 
         setDashboardData(data)
       } catch (err) {
         setError(
           err instanceof Error
             ? err.message
-            : "Failed to load dashboard data"
+            : "Failed to load dashboard data",
         )
       } finally {
         setLoading(false)
@@ -66,7 +70,9 @@ function App() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
         <div className="max-w-md rounded-2xl border border-red-100 bg-white p-6 text-center shadow-sm">
-          <div className="text-3xl">⚠️</div>
+          <div className="text-3xl">
+            ⚠️
+          </div>
 
           <h1 className="mt-3 text-lg font-semibold text-slate-900">
             Unable to load dashboard
@@ -103,14 +109,25 @@ function App() {
             "Campus Building"
           }
           location={`${dashboardData.facility.city}, ${dashboardData.facility.state}`}
-          status={dashboardData.current_status.overall_status}
+          status={
+            dashboardData.current_status
+              .overall_status
+          }
           aiOnline={true}
-          lastUpdated={dashboardData.generated_at}
+          lastUpdated={
+            dashboardData.generated_at
+          }
         />
 
         <main className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-12">
+          {/* ---------------------------------------------------------------- */}
+          {/* KPI + Forecast                                                    */}
+          {/* ---------------------------------------------------------------- */}
+
           <div className="lg:col-span-5">
-            <KPIGrid kpis={dashboardData.kpis} />
+            <KPIGrid
+              kpis={dashboardData.kpis}
+            />
           </div>
 
           <div className="lg:col-span-7">
@@ -119,40 +136,83 @@ function App() {
             />
           </div>
 
+          {/* ---------------------------------------------------------------- */}
+          {/* AI Decision Center                                                */}
+          {/* ---------------------------------------------------------------- */}
+
+          <div className="lg:col-span-12">
+            <AIDecisionCenter
+              contextAnalysis={
+                dashboardData.context_analysis
+              }
+              optimization={
+                dashboardData.optimization
+              }
+            />
+          </div>
+
+          {/* ---------------------------------------------------------------- */}
+          {/* Existing AI intelligence panels                                  */}
+          {/* ---------------------------------------------------------------- */}
+
           <div className="lg:col-span-4">
             <AlertCenter
-              anomalies={dashboardData.anomalies}
-              currentStatus={dashboardData.current_status}
+              anomalies={
+                dashboardData.anomalies
+              }
+              currentStatus={
+                dashboardData.current_status
+              }
             />
           </div>
 
           <div className="lg:col-span-3">
             <AIInsightPanel
-              currentStatus={dashboardData.current_status}
-              confidence={dashboardData.confidence}
-              priority={dashboardData.priority}
-              explanation={dashboardData.explanation}
-              forecast={dashboardData.forecast}
+              currentStatus={
+                dashboardData.current_status
+              }
+              confidence={
+                dashboardData.confidence
+              }
+              priority={
+                dashboardData.priority
+              }
+              explanation={
+                dashboardData.explanation
+              }
+              forecast={
+                dashboardData.forecast
+              }
             />
           </div>
 
           <div className="lg:col-span-5">
             <DigitalTwinPanel
-              digitalTwin={dashboardData.digital_twin}
+              digitalTwin={
+                dashboardData.digital_twin
+              }
             />
           </div>
 
           <div className="lg:col-span-7">
             <AIRecommendations
-              recommendation={dashboardData.recommendation}
-              priority={dashboardData.priority}
+              recommendation={
+                dashboardData.recommendation
+              }
+              priority={
+                dashboardData.priority
+              }
             />
           </div>
 
           <div className="lg:col-span-5">
             <WhatIfAnalysis
-              whatIf={dashboardData.what_if}
-              analysis={dashboardData.what_if_analysis}
+              whatIf={
+                dashboardData.what_if
+              }
+              analysis={
+                dashboardData.what_if_analysis
+              }
             />
           </div>
         </main>

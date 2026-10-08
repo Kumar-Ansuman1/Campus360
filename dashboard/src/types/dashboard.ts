@@ -82,6 +82,53 @@ export type WhatIfAnalysis = {
   interpretation: string
 }
 
+export type ContextAnalysis = {
+  actual_energy: number
+  expected_energy: number
+  deviation_percent: number
+  status: string
+  occupancy: number
+  working_day: boolean
+  temperature: number
+  hvac_load: number
+  hour: number
+  flags: string[]
+  interpretation: string
+}
+
+export type OptimizationImpact = {
+  energy_saved_kwh_per_day: number
+  cost_saving_inr_per_day: number
+  co2_reduction_kg_per_day: number
+}
+
+export type OptimizationIssue = {
+  category: string
+  status: string
+  deviation_percent: number
+  forecast_trend: string
+  priority_score: number
+  priority: string
+}
+
+export type OptimizationPriority = {
+  category: string
+  status: string
+  deviation_percent: number
+  forecast_trend: string
+  priority_score: number
+  priority: string
+  recommended_action: string
+  impact: OptimizationImpact
+}
+
+export type OptimizationData = {
+  decision: string
+  issues: OptimizationIssue[]
+  ranked_issues: OptimizationIssue[]
+  top_priority: OptimizationPriority | null
+}
+
 export type DigitalTwinVisualization = {
   energy_state: string
   water_state: string
@@ -106,6 +153,7 @@ export type DigitalTwinState = {
   priority: string
   what_if: WhatIfData
   visualization: DigitalTwinVisualization
+  optimization?: OptimizationData
 }
 
 export type FacilityData = {
@@ -179,6 +227,10 @@ export type DashboardData = {
   what_if: WhatIfData
 
   what_if_analysis: WhatIfAnalysis
+
+  context_analysis?: ContextAnalysis
+
+  optimization?: OptimizationData
 
   digital_twin: DigitalTwinState
 }

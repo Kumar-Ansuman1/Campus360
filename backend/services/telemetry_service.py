@@ -6,6 +6,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from backend.core.exceptions import DatabaseException
+from backend.models.device import Device
 from backend.models.telemetry import Telemetry
 from backend.schemas.telemetry import TelemetryCreate
 from backend.utils.resource_validator import ResourceValidator
@@ -102,3 +103,41 @@ class TelemetryService:
         )
 
         return list(db.scalars(statement).all())
+
+    # ========================================================
+    # CONTEXT TELEMETRY BY BUILDING
+    # ========================================================
+
+    @staticmethod
+    def get_context_by_building(
+        db: Session,
+        building_id: UUID,
+    ) -> list[Telemetry]:
+        """
+        Return the latest context telemetry records belonging
+        to devices installed in the requested building.
+
+        Context devices are identified using the existing
+        Device.category field.
+        """
+
+        statement = (
+            select(Telemetry)
+            .join(
+                Device,
+                Telemetry.device_id == Device.id,
+            )
+            .where(
+                Device.building_id == building_id,
+                Device.category == "CONTEXT",
+            )
+            .order_by(
+                Telemetry.timestamp.desc()
+            )
+        )
+
+        return list(
+            db.scalars(
+                statement
+            ).all()
+        )
