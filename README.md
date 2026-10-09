@@ -1,6 +1,6 @@
-# Campus360 — EcoFacility AI
+# PARISAR360 — EcoFacility AI
 
-Campus360 is an AI-powered smart-facility intelligence platform for monitoring and understanding campus operations.
+PARISAR360 is an AI-powered smart-facility intelligence platform for monitoring and understanding campus operations.
 
 It combines a FastAPI backend, an AI intelligence pipeline, and a React-based dashboard to turn facility telemetry into operational KPIs, anomaly status, forecasts, recommendations, what-if analysis, and Digital Twin visualization data.
 
