@@ -82,6 +82,81 @@ export type WhatIfAnalysis = {
   interpretation: string
 }
 
+/* -------------------------------------------------------------------------- */
+/* AI Context Analysis                                                        */
+/* -------------------------------------------------------------------------- */
+
+export type ContextFlags = {
+  low_occupancy: boolean
+  high_temperature: boolean
+  high_hvac_load: boolean
+  large_energy_deviation: boolean
+  working_day: boolean
+}
+
+export type ContextAnalysis = {
+  actual_energy: number
+  expected_energy: number
+  deviation_percent: number
+  status: string
+  occupancy: number
+  working_day: boolean
+  temperature: number
+  hvac_load: number
+  hour: number
+  flags: ContextFlags
+  interpretation: string
+}
+
+/* -------------------------------------------------------------------------- */
+/* Optimization & Decision Layer                                             */
+/* -------------------------------------------------------------------------- */
+
+export type OptimizationScoreBreakdown = {
+  total_score: number
+  severity_score: number
+  deviation_score: number
+  forecast_score: number
+}
+
+export type OptimizationImpact = {
+  energy_saved_kwh_per_day: number
+  cost_saving_inr_per_day: number
+  co2_reduction_kg_per_day: number
+}
+
+export type OptimizationIssue = {
+  category: string
+  status: string
+  deviation_percent: number
+  forecast: string
+  priority: string
+  score: number
+  score_breakdown: OptimizationScoreBreakdown
+}
+
+export type OptimizationPriority = {
+  category: string
+  status: string
+  deviation_percent: number
+  forecast: string
+  priority: string
+  score: number
+  score_breakdown: OptimizationScoreBreakdown
+  recommended_action: string
+  impact: OptimizationImpact
+}
+
+export type OptimizationData = {
+  decision: string
+  top_priority: OptimizationPriority | null
+  ranked_issues: OptimizationIssue[]
+}
+
+/* -------------------------------------------------------------------------- */
+/* Digital Twin                                                               */
+/* -------------------------------------------------------------------------- */
+
 export type DigitalTwinVisualization = {
   energy_state: string
   water_state: string
@@ -106,7 +181,12 @@ export type DigitalTwinState = {
   priority: string
   what_if: WhatIfData
   visualization: DigitalTwinVisualization
+  optimization?: OptimizationData
 }
+
+/* -------------------------------------------------------------------------- */
+/* Facility / Building                                                        */
+/* -------------------------------------------------------------------------- */
 
 export type FacilityData = {
   id: string
@@ -141,6 +221,10 @@ export type DashboardAnomalies = {
   traffic: AnomalyCategory
 }
 
+/* -------------------------------------------------------------------------- */
+/* Complete Dashboard Response                                                */
+/* -------------------------------------------------------------------------- */
+
 export type DashboardData = {
   status: string
   generated_at: string
@@ -165,9 +249,6 @@ export type DashboardData = {
 
   explanation: string
 
-  /*
-   * Backend returns this as a plain string.
-   */
   recommendation: string
 
   rag: unknown
@@ -179,6 +260,10 @@ export type DashboardData = {
   what_if: WhatIfData
 
   what_if_analysis: WhatIfAnalysis
+
+  context_analysis?: ContextAnalysis
+
+  optimization?: OptimizationData
 
   digital_twin: DigitalTwinState
 }

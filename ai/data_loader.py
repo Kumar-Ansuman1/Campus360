@@ -202,6 +202,95 @@ class CampusDataLoader:
             f"/traffic/building/{building_id}"
         )
 
+    # ========================================================
+    # CONTEXT TELEMETRY
+    # ========================================================
+
+    def get_context(
+        self,
+        building_id
+    ):
+        """
+        Load the latest simulated context telemetry for
+        a building.
+
+        The backend returns telemetry records such as:
+
+            energy_actual
+            energy_expected
+            occupancy
+            working_day
+            temperature
+            hvac_load
+            hour
+
+        The loader converts those records into the structure
+        expected by EnergyContextAnalyzer.
+        """
+
+        records = self._get(
+            f"/telemetry/context/building/{building_id}"
+        )
+
+        context = {}
+
+        for record in records:
+
+            metric = record.get(
+                "metric"
+            )
+
+            if not metric:
+                continue
+
+            context[
+                metric
+            ] = record.get(
+                "value"
+            )
+
+        return {
+            "actual_energy":
+                context.get(
+                    "energy_actual"
+                ),
+
+            "expected_energy":
+                context.get(
+                    "energy_expected"
+                ),
+
+            "occupancy":
+                context.get(
+                    "occupancy"
+                ),
+
+            "working_day":
+                bool(
+                    context.get(
+                        "working_day"
+                    )
+                )
+                if context.get(
+                    "working_day"
+                ) is not None
+                else None,
+
+            "temperature":
+                context.get(
+                    "temperature"
+                ),
+
+            "hvac_load":
+                context.get(
+                    "hvac_load"
+                ),
+
+            "hour":
+                context.get(
+                    "hour"
+                ),
+        }
 
     # ========================================================
     # COMPLETE BUILDING DATA

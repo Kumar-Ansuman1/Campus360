@@ -12,7 +12,9 @@ type AIInsightPanelProps = {
   forecast: ForecastData
 }
 
-function getStatusStyle(status: DashboardStatus) {
+function getStatusStyle(
+  status: DashboardStatus,
+) {
   switch (status) {
     case "CRITICAL":
       return "bg-red-50 text-red-600 border-red-100"
@@ -31,25 +33,39 @@ function getStatusStyle(status: DashboardStatus) {
   }
 }
 
-function getPriorityStyle(priority: string) {
-  const normalized = priority.toUpperCase()
+function getPriorityStyle(
+  priority: string,
+) {
+  const normalized =
+    priority.toUpperCase()
 
-  if (normalized === "CRITICAL") {
+  if (
+    normalized.startsWith("P1") ||
+    normalized === "CRITICAL"
+  ) {
     return "text-red-600"
   }
 
-  if (normalized === "HIGH") {
-    return "text-amber-600"
+  if (
+    normalized.startsWith("P2") ||
+    normalized === "HIGH"
+  ) {
+    return "text-orange-600"
   }
 
-  if (normalized === "MEDIUM") {
-    return "text-blue-600"
+  if (
+    normalized.startsWith("P3") ||
+    normalized === "MEDIUM"
+  ) {
+    return "text-yellow-600"
   }
 
   return "text-emerald-600"
 }
 
-function formatConfidence(confidence: string | null | undefined) {
+function formatConfidence(
+  confidence: string | null | undefined,
+) {
   if (!confidence) {
     return "N/A"
   }
@@ -64,7 +80,8 @@ function AIInsightPanel({
   explanation,
   forecast,
 }: AIInsightPanelProps) {
-  const status = currentStatus.overall_status
+  const status =
+    currentStatus.overall_status
 
   return (
     <section className="h-full rounded-2xl border border-blue-100 bg-white p-5 shadow-sm">
@@ -96,7 +113,9 @@ function AIInsightPanel({
             </p>
 
             <p className="mt-1 text-2xl font-bold text-slate-900">
-              {formatConfidence(confidence)}
+              {formatConfidence(
+                confidence,
+              )}
             </p>
           </div>
 
@@ -122,7 +141,8 @@ function AIInsightPanel({
         </p>
 
         <p className="mt-2 text-sm leading-6 text-slate-600">
-          {explanation || "No AI explanation is currently available."}
+          {explanation ||
+            "No AI explanation is currently available."}
         </p>
       </div>
 

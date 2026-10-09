@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react"
 
 import DashboardHeader from "./components/dashboard/DashboardHeader"
@@ -8,6 +9,7 @@ import AIInsightPanel from "./components/dashboard/AIInsightPanel"
 import DigitalTwinPanel from "./components/dashboard/DigitalTwinPanel"
 import AIRecommendations from "./components/dashboard/AIRecommendations"
 import WhatIfAnalysis from "./components/dashboard/WhatIfAnalysis"
+import AIDecisionCenter from "./components/dashboard/AIDecisionCenter"
 
 import { getDashboardData } from "./api/dashboardApi"
 import type { DashboardData } from "./types/dashboard"
@@ -17,30 +19,58 @@ function App() {
     useState<DashboardData | null>(null)
 
   const [loading, setLoading] = useState(true)
+  const [isOptimizing, setIsOptimizing] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    async function loadDashboard() {
-      try {
+  async function loadDashboard(
+    showLoading = true,
+  ) {
+    try {
+      if (showLoading) {
         setLoading(true)
-        setError(null)
+      }
 
-        const data = await getDashboardData()
+      setError(null)
 
-        console.log("Campus360 dashboard data:", data)
+      const data = await getDashboardData()
 
-        setDashboardData(data)
-      } catch (err) {
-        setError(
-          err instanceof Error
-            ? err.message
-            : "Failed to load dashboard data"
-        )
-      } finally {
+      console.log(
+        "Campus360 dashboard data:",
+        data,
+      )
+
+      setDashboardData(data)
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to load dashboard data",
+      )
+    } finally {
+      if (showLoading) {
         setLoading(false)
       }
     }
+  }
 
+  async function handleOptimize() {
+    try {
+      setIsOptimizing(true)
+      setError(null)
+
+      await loadDashboard(false)
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to optimize campus",
+      )
+    } finally {
+      setIsOptimizing(false)
+    }
+  }
+
+  useEffect(() => {
     loadDashboard()
   }, [])
 
@@ -66,7 +96,9 @@ function App() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
         <div className="max-w-md rounded-2xl border border-red-100 bg-white p-6 text-center shadow-sm">
-          <div className="text-3xl">⚠️</div>
+          <div className="text-3xl">
+            ⚠️
+          </div>
 
           <h1 className="mt-3 text-lg font-semibold text-slate-900">
             Unable to load dashboard
@@ -88,29 +120,79 @@ function App() {
     return null
   }
 
+  /*
+   * ------------------------------------------------------------------------
+   * Optimization Decision Source of Truth
+   * ------------------------------------------------------------------------
+   *
+   * The existing dashboard status is generated from the original
+   * telemetry pipeline. The optimization layer adds context-aware
+   * decision information on top of that.
+   *
+   * When an optimization decision exists, use its top priority to
+   * synchronize the facility-facing AI panels.
+   *
+   * This prevents the dashboard from showing:
+   *
+   *   Header      -> NORMAL
+   *   AI Insight  -> NORMAL / LOW
+   *   Decision    -> CRITICAL / P1
+   *
+   * at the same time.
+   */
+
+  const topPriority =
+    dashboardData.optimization?.top_priority
+
+  const effectiveCurrentStatus = topPriority
+    ? {
+        ...dashboardData.current_status,
+        overall_status:
+          topPriority.status as typeof dashboardData.current_status.overall_status,
+        energy_status:
+          topPriority.category === "ENERGY"
+            ? topPriority.status
+            : dashboardData.current_status.energy_status,
+      }
+    : dashboardData.current_status
+
+  const effectivePriority =
+    topPriority?.priority ??
+    dashboardData.priority
+
+  const effectiveExplanation =
+    dashboardData.context_analysis?.interpretation ??
+    dashboardData.explanation
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <div className="mx-auto max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8">
         <DashboardHeader
-          facilityName={
-            dashboardData.facility.name ??
-            dashboardData.facility.facility_name ??
-            "EcoFacility Smart Campus"
-          }
+          facilityName="Parishar360"
           buildingName={
             dashboardData.building.building_name ??
             dashboardData.building.name ??
             "Campus Building"
           }
           location={`${dashboardData.facility.city}, ${dashboardData.facility.state}`}
-          status={dashboardData.current_status.overall_status}
+          status={
+            effectiveCurrentStatus.overall_status
+          }
           aiOnline={true}
-          lastUpdated={dashboardData.generated_at}
+          lastUpdated={
+            dashboardData.generated_at
+          }
         />
 
         <main className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-12">
+          {/* ---------------------------------------------------------------- */}
+          {/* KPI + Forecast                                                    */}
+          {/* ---------------------------------------------------------------- */}
+
           <div className="lg:col-span-5">
-            <KPIGrid kpis={dashboardData.kpis} />
+            <KPIGrid
+              kpis={dashboardData.kpis}
+            />
           </div>
 
           <div className="lg:col-span-7">
@@ -119,40 +201,89 @@ function App() {
             />
           </div>
 
+          {/* ---------------------------------------------------------------- */}
+          {/* AI Decision Center                                                */}
+          {/* ---------------------------------------------------------------- */}
+
+          <div className="lg:col-span-12">
+            <AIDecisionCenter
+              contextAnalysis={
+                dashboardData.context_analysis
+              }
+              optimization={
+                dashboardData.optimization
+              }
+              onOptimize={handleOptimize}
+              isOptimizing={isOptimizing}
+            />
+          </div>
+
+          {/* ---------------------------------------------------------------- */}
+          {/* Existing AI intelligence panels                                  */}
+          {/* ---------------------------------------------------------------- */}
+
           <div className="lg:col-span-4">
             <AlertCenter
-              anomalies={dashboardData.anomalies}
-              currentStatus={dashboardData.current_status}
+              anomalies={
+                dashboardData.anomalies
+              }
+              currentStatus={
+                effectiveCurrentStatus
+              }
+              optimization={
+                dashboardData.optimization
+              }
             />
           </div>
 
           <div className="lg:col-span-3">
             <AIInsightPanel
-              currentStatus={dashboardData.current_status}
-              confidence={dashboardData.confidence}
-              priority={dashboardData.priority}
-              explanation={dashboardData.explanation}
-              forecast={dashboardData.forecast}
+              currentStatus={
+                effectiveCurrentStatus
+              }
+              confidence={
+                dashboardData.confidence
+              }
+              priority={
+                effectivePriority
+              }
+              explanation={
+                effectiveExplanation
+              }
+              forecast={
+                dashboardData.forecast
+              }
             />
           </div>
 
           <div className="lg:col-span-5">
             <DigitalTwinPanel
-              digitalTwin={dashboardData.digital_twin}
+              digitalTwin={
+                dashboardData.digital_twin
+              }
             />
           </div>
 
           <div className="lg:col-span-7">
             <AIRecommendations
-              recommendation={dashboardData.recommendation}
-              priority={dashboardData.priority}
+              recommendation={
+                topPriority?.recommended_action ??
+                dashboardData.recommendation
+              }
+              priority={
+                effectivePriority
+              }
             />
           </div>
 
           <div className="lg:col-span-5">
             <WhatIfAnalysis
-              whatIf={dashboardData.what_if}
-              analysis={dashboardData.what_if_analysis}
+              whatIf={
+                dashboardData.what_if
+              }
+              analysis={
+                dashboardData.what_if_analysis
+              }
             />
           </div>
         </main>

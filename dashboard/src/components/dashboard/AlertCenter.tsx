@@ -1,16 +1,19 @@
 import type {
   DashboardAnomalies,
   DashboardStatus,
+  OptimizationData,
 } from "../../types/dashboard"
 
 type AlertCenterProps = {
   anomalies: DashboardAnomalies
   currentStatus: {
+    overall_status?: DashboardStatus
     energy_status: string
     water_status: string
     waste_status: string
     traffic_status: string
   }
+  optimization?: OptimizationData
 }
 
 type AlertItem = {
@@ -22,7 +25,8 @@ type AlertItem = {
 function normalizeStatus(
   status: string,
 ): DashboardStatus {
-  const normalized = status.toUpperCase()
+  const normalized =
+    status.toUpperCase()
 
   if (
     normalized === "CRITICAL" ||
@@ -61,10 +65,6 @@ function getStatusStyle(
   }
 }
 
-/*
- * The backend now returns anomaly data separately
- * for energy, water, waste and traffic.
- */
 function getTotalAnomalyCount(
   anomalies: DashboardAnomalies,
 ) {
@@ -117,10 +117,6 @@ function getLatestAnomalyScore(
     return "N/A"
   }
 
-  /*
-   * The current backend response has all four scores
-   * at 0, so this will correctly display 0.
-   */
   return scores[0].toFixed(2)
 }
 
@@ -138,10 +134,6 @@ function getLatestAnomalyStatus(
     return null
   }
 
-  /*
-   * If any category reports a non-normal status,
-   * surface that status first.
-   */
   const priority = [
     "CRITICAL",
     "ATTENTION",
@@ -186,10 +178,31 @@ function getAnomalyMessage(
   } detected by the AI pipeline.`
 }
 
+function getActiveIssueCount(
+  currentStatus: AlertCenterProps["currentStatus"],
+) {
+  const statuses = [
+    currentStatus.energy_status,
+    currentStatus.water_status,
+    currentStatus.waste_status,
+    currentStatus.traffic_status,
+  ]
+
+  return statuses.filter(
+    (status) =>
+      normalizeStatus(status) !==
+      "NORMAL",
+  ).length
+}
+
 function AlertCenter({
   anomalies,
   currentStatus,
+  optimization,
 }: AlertCenterProps) {
+  const topPriority =
+    optimization?.top_priority
+
   const alerts: AlertItem[] = [
     {
       category: "Energy",
@@ -200,7 +213,7 @@ function AlertCenter({
         currentStatus.energy_status.toUpperCase() ===
         "NORMAL"
           ? "Energy consumption is within the normal operating range."
-          : `Energy status reported as ${currentStatus.energy_status}.`,
+          : `Energy consumption is currently ${currentStatus.energy_status.toUpperCase()} and requires attention.`,
     },
 
     {
@@ -246,6 +259,11 @@ function AlertCenter({
   const recordsAnalyzed =
     getTotalRecordsAnalyzed(anomalies)
 
+  const activeIssues =
+    getActiveIssueCount(
+      currentStatus,
+    )
+
   return (
     <section className="h-full rounded-2xl border border-blue-100 bg-white p-5 shadow-sm">
       {/* Header */}
@@ -261,7 +279,10 @@ function AlertCenter({
         </div>
 
         <span className="rounded-lg bg-blue-50 px-2.5 py-1 text-[10px] font-semibold text-blue-600">
-          {totalAnomalies} detected
+          {activeIssues} active{" "}
+          {activeIssues === 1
+            ? "issue"
+            : "issues"}
         </span>
       </div>
 
@@ -289,6 +310,16 @@ function AlertCenter({
             <p className="mt-2 text-xs leading-5 text-slate-500">
               {alert.message}
             </p>
+
+            {topPriority?.category ===
+              alert.category &&
+              alert.status !==
+                "NORMAL" && (
+                <p className="mt-1 text-[10px] font-semibold text-red-600">
+                  Priority:{" "}
+                  {topPriority.priority}
+                </p>
+              )}
           </div>
         ))}
       </div>

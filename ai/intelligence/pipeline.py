@@ -95,6 +95,20 @@ except Exception as exc:
     print("Recommendation engine initialization warning:", exc)
 
 
+try:
+    from ai.intelligence.context_analysis import EnergyContextAnalyzer
+except Exception as exc:
+    EnergyContextAnalyzer = None
+    print("Energy context analyzer initialization warning:", exc)
+
+
+try:
+    from ai.intelligence.optimization import OptimizationEngine
+except Exception as exc:
+    OptimizationEngine = None
+    print("Optimization engine initialization warning:", exc)
+
+
 # ================================================================
 # MAIN PIPELINE
 # ================================================================
@@ -185,6 +199,18 @@ class CampusIntelligencePipeline:
                     "Recommendation engine initialization warning:",
                     exc
                 )
+
+        self.context_analyzer = (
+            EnergyContextAnalyzer
+            if EnergyContextAnalyzer
+            else None
+        )
+
+        self.optimization_engine = (
+            OptimizationEngine()
+            if OptimizationEngine
+            else None
+        )
 
     # ============================================================
     # DATAFRAME NORMALIZATION
@@ -1944,8 +1970,48 @@ class CampusIntelligencePipeline:
         current_speed,
         forecast,
         priority,
-        what_if_analysis
+        what_if_analysis,
+        optimization=None
     ):
+
+        # The optimization layer can identify a critical issue even
+        # when the legacy telemetry/anomaly status is still NORMAL.
+        # Reflect that decision in the Digital Twin so the visual
+        # layer agrees with the administrator-facing priority.
+        twin_status = current_status.get(
+            "overall_status",
+            "NORMAL"
+        )
+
+        twin_priority = priority
+
+        if isinstance(
+            optimization,
+            dict
+        ):
+
+            optimization_top = optimization.get(
+                "top_priority"
+            )
+
+            if isinstance(
+                optimization_top,
+                dict
+            ):
+
+                optimization_priority = str(
+                    optimization_top.get(
+                        "priority",
+                        ""
+                    )
+                ).upper()
+
+                if optimization_priority.startswith(
+                    ("P1", "P2")
+                ):
+
+                    twin_status = "ATTENTION"
+                    twin_priority = optimization_priority
 
         return {
 
@@ -1971,10 +2037,7 @@ class CampusIntelligencePipeline:
                 ),
 
             "status":
-                current_status.get(
-                    "overall_status",
-                    "NORMAL"
-                ),
+                twin_status,
 
             "energy":
                 current_energy,
@@ -2006,10 +2069,18 @@ class CampusIntelligencePipeline:
                 else "UNKNOWN",
 
             "priority":
-                priority,
+                twin_priority,
 
             "what_if":
                 what_if_analysis,
+
+            "optimization":
+                optimization
+                if isinstance(
+                    optimization,
+                    dict
+                )
+                else {},
 
             # ----------------------------------------------------
             # Visualization-friendly states
@@ -2020,9 +2091,30 @@ class CampusIntelligencePipeline:
                 {
 
                     "energy_state":
-                        current_status.get(
-                            "energy_status",
-                            "NORMAL"
+                        (
+                            optimization.get(
+                                "top_priority",
+                                {}
+                            ).get(
+                                "status",
+                                current_status.get(
+                                    "energy_status",
+                                    "NORMAL"
+                                )
+                            )
+                            if isinstance(
+                                optimization,
+                                dict
+                            ) and isinstance(
+                                optimization.get(
+                                    "top_priority"
+                                ),
+                                dict
+                            )
+                            else current_status.get(
+                                "energy_status",
+                                "NORMAL"
+                            )
                         ),
 
                     "water_state":
@@ -2055,6 +2147,197 @@ class CampusIntelligencePipeline:
                         else "UNKNOWN"
                 }
         }
+
+    # ============================================================
+    # OPTIMIZATION & DECISION LAYER
+    # ============================================================
+
+    def build_optimization_issues(
+        self,
+        context_analysis,
+        current_status,
+        forecast
+    ):
+        """
+        Build the issues consumed by the optimization engine.
+
+        Energy uses the new context-aware analysis.
+        Other categories reuse the existing AI status/forecast
+        outputs rather than rebuilding their anomaly logic.
+        """
+
+        issues = []
+
+        energy_status = str(
+            context_analysis.get(
+                "status",
+                "NORMAL"
+            )
+        ).upper()
+
+        energy_deviation = self.number(
+            context_analysis.get(
+                "deviation_percent",
+                0
+            )
+        )
+
+        energy_trend = str(
+            forecast.get(
+                "trend",
+                "UNKNOWN"
+            )
+        ).upper() if isinstance(
+            forecast,
+            dict
+        ) else "UNKNOWN"
+
+        issues.append({
+            "category": "ENERGY",
+            "status": energy_status,
+            "deviation_percent": energy_deviation,
+            "forecast": energy_trend
+        })
+
+        category_map = {
+            "WATER": "water_status",
+            "WASTE": "waste_status",
+            "TRAFFIC": "traffic_status"
+        }
+
+        for category, status_key in category_map.items():
+
+            status = str(
+                current_status.get(
+                    status_key,
+                    "NORMAL"
+                )
+            ).upper()
+
+            issues.append({
+                "category": category,
+                "status": status,
+                "deviation_percent": 0,
+                "forecast": "STABLE"
+            })
+
+        return issues
+
+    def run_optimization(
+        self,
+        context_analysis,
+        current_status,
+        forecast,
+        recommendation,
+        what_if_analysis
+    ):
+        """
+        Connect context analysis, existing AI outputs, priority
+        scoring, recommendations and What-If impact.
+        """
+
+        if self.optimization_engine is None:
+
+            return {
+                "decision": "UNAVAILABLE",
+                "issues": [],
+                "ranked_issues": [],
+                "top_priority": None
+            }
+
+        issues = self.build_optimization_issues(
+            context_analysis,
+            current_status,
+            forecast
+        )
+
+        result = self.optimization_engine.optimize(
+            issues
+        )
+
+        top_priority = result.get(
+            "top_priority"
+        )
+
+        if isinstance(
+            top_priority,
+            dict
+        ):
+
+            top_priority = dict(
+                top_priority
+            )
+
+            if str(
+                top_priority.get(
+                    "category",
+                    ""
+                )
+            ).upper() == "ENERGY":
+
+                top_priority[
+                    "recommended_action"
+                ] = (
+                    "Optimize HVAC operating schedule"
+                    if str(
+                        top_priority.get(
+                            "category",
+                            ""
+                        )
+                    ).upper() == "ENERGY"
+                    else (
+                        recommendation
+                        or "Review the identified campus issue."
+                    )
+                )
+
+                top_priority[
+                    "impact"
+                ] = {
+
+                    "energy_saved_kwh_per_day":
+                        self.number(
+                            what_if_analysis.get(
+                                "energy_saved_kwh_per_day",
+                                0
+                            )
+                        ),
+
+                    "cost_saving_inr_per_day":
+                        self.number(
+                            what_if_analysis.get(
+                                "estimated_cost_saving_inr_per_day",
+                                0
+                            )
+                        ),
+
+                    "co2_reduction_kg_per_day":
+                        self.number(
+                            what_if_analysis.get(
+                                "estimated_co2_reduction_kg_per_day",
+                                0
+                            )
+                        )
+                }
+
+        decision = (
+            "ACTION_REQUIRED"
+            if top_priority is not None
+            and str(
+                top_priority.get(
+                    "priority",
+                    ""
+                )
+            ).upper().startswith(
+                ("P1", "P2")
+            )
+            else "MONITOR"
+        )
+
+        result["decision"] = decision
+        result["top_priority"] = top_priority
+
+        return result
 
     # ============================================================
     # MAIN RUN
@@ -2588,6 +2871,74 @@ class CampusIntelligencePipeline:
         )
 
         # ========================================================
+        # 7. CONTEXT-AWARE ENERGY ANALYSIS
+        # ========================================================
+
+        print(
+            "\n[7/8] Running context-aware energy analysis..."
+        )
+
+        context_analysis = {}
+
+        if self.context_analyzer is not None:
+
+            try:
+
+                context_data = (
+                    self.loader.get_context(
+                        building_id
+                    )
+                    if self.loader is not None
+                    else {}
+                )
+
+                if not context_data:
+
+                    context_analysis = {
+                        "status": "UNKNOWN",
+                        "error":
+                            "No context telemetry was returned."
+                    }
+
+                else:
+
+                    context_analysis = (
+                        self.context_analyzer.analyze(
+                            **context_data
+                        )
+                    )
+
+            except Exception as exc:
+
+                print(
+                    "Context analysis warning:",
+                    exc
+                )
+
+                context_analysis = {
+                    "status": "UNKNOWN",
+                    "error": str(exc)
+                }
+
+        # ========================================================
+        # 8. OPTIMIZATION & DECISION
+        # ========================================================
+
+        print(
+            "\n[8/8] Running optimization & decision engine..."
+        )
+
+        optimization = (
+            self.run_optimization(
+                context_analysis,
+                current_status,
+                forecast,
+                recommendation,
+                what_if_analysis
+            )
+        )
+
+        # ========================================================
         # DIGITAL TWIN
         # ========================================================
 
@@ -2631,7 +2982,10 @@ class CampusIntelligencePipeline:
                     priority,
 
                 what_if_analysis=
-                    what_if_analysis
+                    what_if_analysis,
+
+                optimization=
+                    optimization
             )
         )
 
@@ -3091,6 +3445,12 @@ class CampusIntelligencePipeline:
         # ========================================================
 
         return {
+
+            "context_analysis":
+                context_analysis,
+
+            "optimization":
+                optimization,
 
             "status":
                 "success",
